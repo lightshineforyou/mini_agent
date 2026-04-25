@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+from .errors import SandboxError
 from .service import SandboxService
 from .types import SandboxRequest
 
@@ -22,6 +24,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--timeout-ms", type=int, default=5000)
 
     create = subparsers.add_parser("create-session", help="Create a new sandbox session")
+
+    write_file = subparsers.add_parser("write-file", help="Write a file into a sandbox workspace")
+    write_file.add_argument("session_id")
+    write_file.add_argument("relative_path")
+    write_file.add_argument("--stdin", action="store_true", dest="read_stdin")
+    write_file.add_argument("--content")
+
+    cleanup = subparsers.add_parser("cleanup-session", help="Delete a sandbox session")
+    cleanup.add_argument("session_id")
     return parser
 
 
@@ -99,6 +110,35 @@ def main() -> None:
         )
         return
 
+    if args.command == "write-file":
+        if args.read_stdin:
+            content = sys.stdin.read()
+        elif args.content is not None:
+            content = args.content
+        else:
+            parser.error("write-file requires either --stdin or --content")
+        target = service.write_workspace_file(args.session_id, args.relative_path, content)
+        print(
+            json.dumps(
+                {
+                    "session_id": args.session_id,
+                    "relative_path": args.relative_path,
+                    "path": str(target),
+                },
+                indent=2,
+            )
+        )
+        return
+
+    if args.command == "cleanup-session":
+        service.cleanup_session(args.session_id)
+        print(json.dumps({"session_id": args.session_id, "deleted": True}, indent=2))
+        return
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (SandboxError, ValueError, FileNotFoundError) as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1) from exc
