@@ -10,3 +10,5 @@ htmlcov/
 .ropeproject/
 .serena/
 .DS_Store
+gateway/node_modules/
+gateway/.env
