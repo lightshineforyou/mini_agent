@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-agent-sandbox"
+version = "0.1.0"
+description = "A minimal Python command sandbox for a mini agent project"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+sandbox-demo = "mini_agent_sandbox.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
