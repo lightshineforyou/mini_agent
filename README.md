@@ -133,7 +133,77 @@ export LLM_MODEL=gpt-4o-mini
 export DEFAULT_TIMEOUT_MS=5000
 export MAX_TIMEOUT_MS=10000
 export SESSION_TTL_MS=600000
+export CONTEXT_HISTORY_LIMIT=10
+export MAX_CONTEXT_PREVIEW_LENGTH=4000
 ```
+
+### 配置文件持久化（推荐）
+
+现在网关也支持把 LLM 配置持久化到配置文件，默认路径：
+
+```bash
+.mini-agent/gateway-config.json
+```
+
+也可以通过环境变量覆盖路径：
+
+```bash
+export GATEWAY_CONFIG_PATH=/your/path/gateway-config.json
+```
+
+配置文件示例：
+
+```json
+{
+  "llmApiKey": "your_api_key",
+  "llmApiUrl": "https://api.openai.com/v1/chat/completions",
+  "llmModel": "gpt-4o-mini"
+}
+```
+
+优先级：**配置文件 > 环境变量 > 内置默认值**。
+
+你也可以通过 HTTP 接口写入持久化配置：
+
+```bash
+curl -X PUT http://localhost:3000/config/llm \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "llmApiKey": "your_api_key",
+    "llmApiUrl": "https://api.openai.com/v1/chat/completions",
+    "llmModel": "gpt-4o-mini"
+  }'
+```
+
+### 最近上下文缓存
+
+网关现在会缓存最近 `N` 条上下文，并在后续 `/generate-and-run` 调用大模型时自动注入这些上下文。
+
+缓存内容包括：
+
+- 用户指令
+- 实际执行的命令
+- 命令执行返回（stdout / stderr / exit code 等）
+
+默认最近条数来自：
+
+```bash
+export CONTEXT_HISTORY_LIMIT=10
+```
+
+单条缓存内容会做截断，默认长度：
+
+```bash
+export MAX_CONTEXT_PREVIEW_LENGTH=4000
+```
+
+这些上下文会持久化写入 `GATEWAY_CONFIG_PATH` 指向的 JSON 文件中的 `contextHistory` 字段。
+
+现在上下文缓存按 **sessionId 隔离**：
+
+- 只会把**同一个 sessionId** 的历史上下文注入给模型
+- 不同 session 之间不会互相污染
+- 如果请求里没有传 `sessionId`，网关会先创建一个临时 session，再基于这个 session 的历史生成并执行代码
 
 ### 启动网关
 
@@ -262,6 +332,66 @@ curl -X POST http://localhost:3000/execute-code \
 ```bash
 curl -X DELETE http://localhost:3000/sandbox/sessions/<session_id>
 ```
+
+#### 6. 查看当前 LLM 配置
+
+```bash
+curl http://localhost:3000/config/llm
+```
+
+返回会隐藏明文 key，只告诉你是否已配置，以及当前生效的 URL / model 和来源。
+
+#### 7. 持久化更新 LLM 配置
+
+```bash
+curl -X PUT http://localhost:3000/config/llm \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "llmApiKey": "your_api_key",
+    "llmApiUrl": "https://your-base-url/v1/chat/completions"
+  }'
+```
+
+说明：
+
+- `llmApiKey`、`llmApiUrl`、`llmModel` 都支持单独更新
+- 写入后会保存到 `GATEWAY_CONFIG_PATH` 指向的文件
+- 后续 `/generate-and-run` 请求会在请求时动态读取最新配置，无需重启网关
+
+#### 8. 查看最近上下文缓存
+
+```bash
+curl 'http://localhost:3000/context/history?sessionId=<session_id>&limit=10'
+```
+
+如果不传 `sessionId`，会返回全局持久化缓存视图；但模型注入时仍然只会读取当前 session 的历史。
+
+#### 9. 清空最近上下文缓存
+
+```bash
+curl -X DELETE 'http://localhost:3000/context/history?sessionId=<session_id>'
+```
+
+如果不传 `sessionId`，会清空全部缓存。
+
+#### 10. 生成并执行时指定本次注入的上下文条数
+
+```bash
+curl -X POST http://localhost:3000/generate-and-run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "Write a Python script that reads a csv file and prints the row count.",
+    "fileName": "count_rows.py",
+    "timeoutMs": 5000,
+    "contextLimit": 6,
+    "scriptArgs": []
+  }'
+```
+
+说明：
+
+- `contextLimit` 控制本次调用注入给大模型的最近上下文条数
+- 这些缓存现在按 `sessionId` 隔离，注入时只读取当前 session 的最近历史
 
 ## 当前实现边界
 
