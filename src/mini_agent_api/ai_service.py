@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import re
 from openai import AsyncOpenAI
-
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file if present
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
@@ -35,7 +36,7 @@ def _strip_code_fences(text: str) -> str:
         return match.group(1).strip()
     return text
 
-
+# 得到ds api
 def _get_client() -> AsyncOpenAI:
     api_key = os.environ.get("DEEPSEEK_API_KEY")
     if not api_key:

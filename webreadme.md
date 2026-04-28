@@ -119,15 +119,18 @@ set HTTPS_PROXY=http://127.0.0.1:7890
   /api/run_code，发送左侧编辑器当前内容（可手动修改后再跑）。
   - 辅助：清空代码 / 清空对话 / 清空终端；响应式在 <900px 时切换为单列堆叠。
 
-  使用
-
-  1. 启动后端：uvicorn mini_agent_api.server:app --port 8000（确保已设置
-  DEEPSEEK_API_KEY）。
-  2. 直接用浏览器打开 web/index.html，或用简易静态服务器：
-
+  
+  快速使用
+  1.下载配置（仅第一次需要）
+  pip install -e . 
+  2. 启动后端：uvicorn mini_agent_api.server:app --port 8000
+  <!-- （确保已设置DEEPSEEK_API_KEY）(尝试持久化)。
+  需要自己在mini_agent根目录下新建一个.env来存储deepseek api
+  DEEPSEEK_API_KEY=sk-你的真实密钥写在这里 -->
+  3. 或用简易静态服务器：
   python -m http.server 5173 --directory web
-
-  然后访问 http://localhost:5173。CORS 已在 server.py 中放通
-  *，可直接跨域请求 http://localhost:8000。
+  然后访问 http://localhost:5173。
+  <!-- CORS 已在 server.py 中放通
+  *，可直接跨域请求 http://localhost:8000。 -->
 
 ✻ Cogitated for 1m 49s
