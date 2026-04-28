@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os  # 👈 必须加上这行
 import shutil
 import subprocess
 import sys
@@ -15,14 +16,27 @@ class Executor:
     def run(self, request: SandboxRequest, session: SandboxSession) -> SandboxResult:
         started = time.perf_counter()
         executable = self._resolve_executable(request.command)
+        
+        # 强行注入环境变量，告诉 Python 子进程必须用 UTF-8 输出！
+        custom_env = os.environ.copy()
+        custom_env["PYTHONIOENCODING"] = "utf-8"
+
+        # 另外加了一道双保险：如果是 python 命令，直接追加 -X utf8 参数
+        run_args = [executable]
+        if request.command in {"python", "python3"}:
+            run_args.extend(["-X", "utf8"])
+        run_args.extend(request.args)
+
         process = subprocess.Popen(
-            [executable, *request.args],
+            run_args,
             cwd=session.workspace_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
             text=False,
+            env=custom_env,
         )
+        
         timeout = False
         try:
             stdout, stderr = process.communicate(timeout=request.timeout_ms / 1000)

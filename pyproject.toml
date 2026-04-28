@@ -7,10 +7,15 @@ name = "mini-agent-sandbox"
 version = "0.1.0"
 description = "A minimal Python command sandbox for a mini agent project"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "openai>=1.40",
+]
 
 [project.scripts]
 sandbox-demo = "mini_agent_sandbox.cli:main"
+mini-agent-api = "mini_agent_api.server:app"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -23,7 +23,9 @@
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+Linux下：source .venv/bin/activate
+win下： .venv\Scripts\activate.bat
+cd mini_agent
 pip install -e .
 sandbox-demo demo
 ```
@@ -412,3 +414,5 @@ docker run --rm mini-agent-sandbox
 ```
 
 默认会执行 `sandbox-demo demo`。
+
+
